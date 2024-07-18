@@ -12,6 +12,7 @@
 I found several options:
 
 - Tested, works. Set `ASPNETCORE_FORWARDEDHEADERS_ENABLED` to true: <[https://stackoverflow.com/questions/50468033/redirect-uri-sent-as-http-and-not-https-in-app-running-https/76047542#76047542](https://stackoverflow.com/a/76047542/8035608)>
+  - <https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/proxy-load-balancer?view=aspnetcore-7.0#forward-the-scheme-for-linux-and-non-iis-reverse-proxies>
 - Tested, works. Set `context.ProtocolMessage.RedirectUri=...` in `OnRedirectToIdentityProvider` <https://stackoverflow.com/a/68410484>
 - not tested, might help: <https://stackoverflow.com/questions/50468033/redirect-uri-sent-as-http-and-not-https-in-app-running-https>
 - not tested, might help: <https://stackoverflow.com/questions/72488243/openidconnect-redirects-to-http-instead-of-https>
