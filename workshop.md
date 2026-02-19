@@ -20,7 +20,7 @@ Lots of input from Damien Bowden: <https://damienbod.com/2023/09/25/secure-angul
 
 - Download and Install .NET
 - Download and install Visual Studio (as for now, for .NET I prefer the full version of "Visual Studio", not "Visual Stuidio Code")
-- Details <https://learn.microsoft.com/en-us/dotnet/core/install/windows?tabs=net80>
+- Details <https://learn.microsoft.com/en-us/dotnet/core/install/windows>
 - I use C# for .NET <https://learn.microsoft.com/en-us/dotnet/csharp/>
 
 ## New to Angular
@@ -142,7 +142,13 @@ dotnet sln add ./MyBackend/MyBackend.csproj
 
 Test api, there are 2 ways:
 
-> Note! If you get a different port than 7138 for https, open \Properties\launchSettings.json and change from http to https, and port to 7138
+> Note! Make sure you use 7138 for https: open \Properties\launchSettings.json, otherwise
+
+- in the https section
+- remove htttp URL
+- change https url to port to 7138
+- optional: change launchBrowser to true (to launch a browser on start)
+- optional: remove http section
 
 If you want, you can remove all the obsolete profiles in this file and set https+port like this:
 
@@ -163,13 +169,9 @@ If you want, you can remove all the obsolete profiles in this file and set https
   }
 }
 ```
-
+Test the API:
 - Open solution in Visual studio, press F5 to run the Backend:
-  - check the Swagger page and call the API. (get data from weatherforecast api)
-  - optional: open the created http file, check/fix the http -> https and port, click on 'Send request'
-- or in cmd:
-  - `dotnet run --project ./MyBackend/MyBackend.csproj --launch-profile https`
-  - open url (check console for the correct https + port). example: <https://localhost:7138/swagger/index.html>
+  - see json data in https://localhost:7138/weatherforecast
 
 ## Create new Frontend (Angular) App
 
