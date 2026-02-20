@@ -559,7 +559,7 @@ b) Same for minimal API
 app.MapGet("/api/account/login", [AllowAnonymous] async (HttpContext context) =>
 {
     var props = new AuthenticationProperties { RedirectUri = "/" };
-    await context.ChallengeAsync(props); // if not logged in: redirect to STS
+    // await context.ChallengeAsync(props); // if not logged in: redirect to STS -- doppelt 
     return Results.Challenge(props);
 });
 
@@ -642,7 +642,7 @@ app.UseHttpsRedirection(); // existing line
 
 ## Config FE to call Login and Logout
 
-Add Login (get) and Logout (post) to Frontend. Add this at the end of `app.component.html` after `<router-outlet />`:
+Add Login (get) and Logout (post) to Frontend. Add this at the end of `app.html` after `<router-outlet />`:
 
 ```html
  <h2>Login/Logout:</h2>
