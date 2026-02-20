@@ -517,9 +517,7 @@ app.MapControllers(); // added for AccountController
 app.Run();
 ```
 
-Add AccountController.cs in the folder \Controllers of your BE
-
-a) full api
+a) full api: Add AccountController.cs in the folder \Controllers of your BE
 
 ```cs
 using Microsoft.AspNetCore.Authentication;
@@ -552,7 +550,7 @@ public class AccountController : ControllerBase
 }
 ```
 
-b) Same for minimal API
+b) Same for minimal API (program.cs)
 
 ```
 // Login endpoint (anonymous)
