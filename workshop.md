@@ -213,7 +213,8 @@ app.UseStaticFiles(); // added: reads files from wwwroot (call https://localhost
 
 ### Option a): Compile (build) Angular to wwwroot
 
-This is simple and practical for this demo. But for real world scenario, use Option b).
+This is simple too simple and just for understanding. Better use Option b).
+
 The big disadvantage of this option: no Angular debug is avilable, because we need to build the app after each change to run it in BE.
 
 The following change ov `angular.json` will change the output folder of Angular build to /MyBackend/wwwroot.
@@ -239,25 +240,85 @@ You will see "Hello, MyFrontend" again, but now served from BE.
 
 ### Option b): use Angular Development to run in Backend
 
-> todo: show implementation and usage of Reverse-Proxy YARP. This will allow FE debugging while running FE using BFF in BE.
+- <https://github.com/damienbod/bff-openiddict-aspnetcore-angular>
+- maybe also <https://damienbod.com/2023/09/18/secure-angular-application-using-auth0-and-asp-net-core-with-bff/>
+
+Install yarp:
+
+```
+dotnet add package Yarp.ReverseProxy
+```
+
+Add middleware:
+
+```
+var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddReverseProxy()
+    .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
+var app = builder.Build();
+if (app.Environment.IsDevelopment())
+{
+    app.MapReverseProxy();
+}
+app.Run();
+```
+
+Add Config to appsettings.Development.json
+
+```json
+"ReverseProxy": {
+    "Routes": {
+        "route1": {
+            "ClusterId": "cluster1",
+            "Match": {
+                "Path": "{**catch-all}"
+            }
+        }
+    },
+    "Clusters": {
+        "cluster1": {
+            "HttpClient": {
+                "SslProtocols": [
+                    "Tls12"
+                ],
+                "DangerousAcceptAnyServerCertificate": true
+            },
+            "Destinations": {
+                "cluster1/destination1": {
+                    "Address": "http://localhost:4200/"
+                }
+            }
+        }
+    }
+}
+```
+
+Run both: FE and BE. BE (Port 7138) appears in browser but will show FE (running Port 4200).
+NOTE: Check console to see the data in from BE.
+
+```
+npm run start
+F5 in Visual Studio
+```
+
+> Advantage: no ssl cert is needed for FE
 
 ### Frontend: get data from backend
 
-This `\src\app\app.component.ts` was generated:
+This `\src\app\app.ts` was generated:
 
 ```ts
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 
 @Component({
   selector: 'app-root',
-  standalone: true,
   imports: [RouterOutlet],
-  templateUrl: './app.component.html',
-  styleUrl: './app.component.css'
+  templateUrl: './app.html',
+  styleUrl: './app.css'
 })
-export class AppComponent {
-  title = 'MyFrontend';
+export class App {
+  protected readonly title = signal('MyFrontend');
 }
 ```
 
@@ -265,25 +326,25 @@ Replace it with this new AppComponent (add http client module, call /weatherfore
 
 ```ts
 import { HttpClient, HttpClientModule } from '@angular/common/http'; // added
-import { Component, OnInit } from '@angular/core';
+import { Component, signal, OnInit } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 
 @Component({
   selector: 'app-root',
   standalone: true,
   imports: [RouterOutlet, HttpClientModule], // added: HttpClientModule
-  templateUrl: './app.component.html',
-  styleUrl: './app.component.css',
+  templateUrl: './app.html',
+  styleUrl: './app.css',
 })
-export class AppComponent implements OnInit {
+export class App implements OnInit {
   // HttpClient needs import of HttpClientModule (add to imports)
-  constructor(private http: HttpClient) {}
+  constructor(private readonly http: HttpClient) {}
   ngOnInit(): void {
     this.http.get('/weatherForecast').subscribe((res) => {
       console.warn("Got data from BE", res); // Check browser debugger console to see the data
     });
   }
-  title = 'MyFrontend';
+  protected readonly title = signal('MyFrontend');
 }
 ```
 
@@ -340,13 +401,13 @@ From now on, run both projects: Backend, Identity Server:
 
 Simplest version: add `[Authorize]` to Endpoint:
 
-Minimal API: old:
+Minimal API: before:
 
 ```cs
 app.MapGet("/weatherforecast", () =>
 ```
 
-Minimal Api: new:
+Minimal Api: after:
 
 ```cs
 app.MapGet("/weatherforecast", [Authorize] () =>
@@ -458,6 +519,8 @@ app.Run();
 
 Add AccountController.cs in the folder \Controllers of your BE
 
+a) full api
+
 ```cs
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -489,6 +552,31 @@ public class AccountController : ControllerBase
 }
 ```
 
+b) Same for minimal API
+
+```
+// Login endpoint (anonymous)
+app.MapGet("/api/account/login", [AllowAnonymous] async (HttpContext context) =>
+{
+    var props = new AuthenticationProperties { RedirectUri = "/" };
+    await context.ChallengeAsync(props); // if not logged in: redirect to STS
+    return Results.Challenge(props);
+});
+
+// Logout endpoint (authorized)
+app.MapPost("/api/account/logout", [Authorize(AuthenticationSchemes = CookieAuthenticationDefaults.AuthenticationScheme)] async (HttpContext context) =>
+{
+    await context.SignOutAsync(
+        CookieAuthenticationDefaults.AuthenticationScheme,
+        new AuthenticationProperties { RedirectUri = "/" }
+    );
+    return Results.SignOut(
+        new AuthenticationProperties { RedirectUri = "/" },
+        new[] { CookieAuthenticationDefaults.AuthenticationScheme }
+    );
+});
+```
+
 Identity Server: configure CORS to allow access
 
 a) Programm.cs
@@ -505,7 +593,7 @@ new:
 
 ```cs
     ...
-    _ = builder.Services.AddCors(options =>
+    builder.Services.AddCors(options =>
     {
         options.AddPolicy(name: "_myAllowSpecificOrigins",
             policy =>
@@ -522,17 +610,8 @@ b) HostingExtensions.cs
 
 Add `UseCors()` to ConfigurePipeline
 
-old:
-
-```cs
-app.UseStaticFiles();
-```
-
-new:
-
 ```cs
 app.UseCors("_myAllowSpecificOrigins");
-app.UseStaticFiles();
 ```
 
 BE: Configure CORS in BE to allow Access from Identity Server
@@ -542,22 +621,21 @@ add this somewhere in the build part (before builder.Bild()):
 ```cs
 string MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
 
-_ = builder.Services.AddCors(options =>
+builder.Services.AddCors(options =>
 {
     options.AddPolicy(name: MyAllowSpecificOrigins,
         policy =>
         {
             _ = policy.WithOrigins("https://localhost:5001").AllowAnyHeader().AllowAnyMethod(); // STS URL
-            //_ = policy.WithOrigins("https://localhost:7138").AllowAnyHeader().AllowAnyMethod(); // ???
         });
 });
 ```
 
-add `UseCors()`
+add `UseCors` :
 
 ```cs
 ...
-app.UseCors(MyAllowSpecificOrigins);.
+app.UseCors(MyAllowSpecificOrigins);
 app.UseHttpsRedirection(); // existing line
 ...
 ```
@@ -603,6 +681,3 @@ fyi: There are some JavaScript errors - it looks like they are comming from Iden
 - add more security (like PKCE: see bowden)
 - login in swagger
 - json parse error when not logged in
-- development mode (using reverse proxy yarp):
-  - <https://github.com/damienbod/bff-openiddict-aspnetcore-angular>
-  - maybe also <https://damienbod.com/2023/09/18/secure-angular-application-using-auth0-and-asp-net-core-with-bff/>
