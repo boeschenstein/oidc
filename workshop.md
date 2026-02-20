@@ -464,6 +464,7 @@ Add OpenIdConnect client package to your BE (/MyBackend):
 `dotnet add package Microsoft.AspNetCore.Authentication.OpenIdConnect`
 
 Add the following OIDC configuration (please have a closer look to Authority, ClientId, ClientSecret):
+(NOTE: replace existing AddAuthentication())
 
 ```cs
 // add this to your BE, after builder.Services.AddAuthorization() and before builder.Build();:
@@ -552,12 +553,11 @@ public class AccountController : ControllerBase
 
 b) Same for minimal API (program.cs)
 
-```
+```cs
 // Login endpoint (anonymous)
-app.MapGet("/api/account/login", [AllowAnonymous] async (HttpContext context) =>
+app.MapGet("/api/account/login", [AllowAnonymous] async () =>
 {
     var props = new AuthenticationProperties { RedirectUri = "/" };
-    // await context.ChallengeAsync(props); // if not logged in: redirect to STS -- doppelt 
     return Results.Challenge(props);
 });
 
